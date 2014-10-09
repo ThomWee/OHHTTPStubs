@@ -272,12 +272,14 @@ static NSTimeInterval const kSlotTime = 0.25; // Must be >0. We will send a chun
 
 @property(atomic) NSInteger previousFailureCount;
 @property(atomic) BOOL ignoreChallenge;
+@property(nonatomic, readwrite) NSURLRequest *request;
 
 @property(assign) CFRunLoopRef clientRunLoop;
 - (void)executeOnClientRunLoopAfterDelay:(NSTimeInterval)delayInSeconds block:(dispatch_block_t)block;
 @end
 
 @implementation OHHTTPStubsProtocol
+@synthesize request = _request;
 
 + (BOOL)canInitWithRequest:(NSURLRequest *)request
 {
@@ -440,7 +442,8 @@ static NSTimeInterval const kSlotTime = 0.25; // Must be >0. We will send a chun
     
     NSData *data = [creds dataUsingEncoding:NSUTF8StringEncoding];
     [mutableCopyOfRequest addValue:[@"Basic " stringByAppendingString:[data base64EncodedStringWithOptions:0]] forHTTPHeaderField:@"Authorization"];
-    
+
+    self.request = mutableCopyOfRequest;
     self.stub = [OHHTTPStubs.sharedInstance firstStubPassingTestForRequest:mutableCopyOfRequest];
     [self startLoading];
 }
@@ -450,6 +453,13 @@ static NSTimeInterval const kSlotTime = 0.25; // Must be >0. We will send a chun
     [self startLoading];
 }
 
+- (NSURLRequest *)request {
+    if (_request == nil) {
+        return super.request;
+    }
+    
+    return _request;
+}
 
 typedef struct {
     NSTimeInterval slotTime;
