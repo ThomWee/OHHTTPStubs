@@ -379,7 +379,7 @@ static NSTimeInterval const kSlotTime = 0.25; // Must be >0. We will send a chun
                                                                                                    previousFailureCount:self.previousFailureCount++
                                                                                                         failureResponse:nil
                                                                                                                   error:nil
-                                                                                                                 sender:nil];
+                                                                                                                 sender:(id<NSURLAuthenticationChallengeSender>)self];
             [client URLProtocol:self didReceiveAuthenticationChallenge:authChallange];
         }
         else
