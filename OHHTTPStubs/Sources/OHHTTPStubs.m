@@ -269,6 +269,10 @@ static NSTimeInterval const kSlotTime = 0.25; // Must be >0. We will send a chun
 @interface OHHTTPStubsProtocol()
 @property(assign) BOOL stopped;
 @property(strong) OHHTTPStubsDescriptor* stub;
+
+@property(atomic) NSInteger previousFailureCount;
+@property(atomic) BOOL ignoreChallenge;
+
 @property(assign) CFRunLoopRef clientRunLoop;
 - (void)executeOnClientRunLoopAfterDelay:(NSTimeInterval)delayInSeconds block:(dispatch_block_t)block;
 @end
@@ -363,6 +367,20 @@ static NSTimeInterval const kSlotTime = 0.25; // Must be >0. We will send a chun
                     [client URLProtocol:self wasRedirectedToRequest:redirectRequest redirectResponse:urlResponse];
                 }
             }];
+        }
+        else if (urlResponse.statusCode == 401 && !self.ignoreChallenge) {
+            NSURLProtectionSpace* protection = [[NSURLProtectionSpace alloc] initWithHost:self.request.URL.host
+                                                                                     port:[self.request.URL.port integerValue]
+                                                                                 protocol:self.request.URL.scheme
+                                                                                    realm:@"my realm"
+                                                                     authenticationMethod:NSURLAuthenticationMethodHTTPBasic];
+            NSURLAuthenticationChallenge* authChallange = [[NSURLAuthenticationChallenge alloc] initWithProtectionSpace:protection
+                                                                                                     proposedCredential:nil
+                                                                                                   previousFailureCount:self.previousFailureCount++
+                                                                                                        failureResponse:nil
+                                                                                                                  error:nil
+                                                                                                                 sender:nil];
+            [client URLProtocol:self didReceiveAuthenticationChallenge:authChallange];
         }
         else
         {
