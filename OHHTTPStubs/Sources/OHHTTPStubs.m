@@ -425,6 +425,32 @@ static NSTimeInterval const kSlotTime = 0.25; // Must be >0. We will send a chun
     self.stopped = YES;
 }
 
+-(void)cancelAuthenticationChallenge:(NSURLAuthenticationChallenge *)challenge {
+    
+}
+
+-(void)continueWithoutCredentialForAuthenticationChallenge:(NSURLAuthenticationChallenge *)challenge {
+    self.ignoreChallenge = YES;
+    [self startLoading];
+}
+
+- (void)useCredential:(NSURLCredential *)credential forAuthenticationChallenge:(NSURLAuthenticationChallenge *)challenge {
+    NSMutableURLRequest *mutableCopyOfRequest = [self.request mutableCopy];
+    NSString *creds = [NSString stringWithFormat:@"%@:%@", credential.user, credential.password];
+    
+    NSData *data = [creds dataUsingEncoding:NSUTF8StringEncoding];
+    [mutableCopyOfRequest addValue:[@"Basic " stringByAppendingString:[data base64EncodedStringWithOptions:0]] forHTTPHeaderField:@"Authorization"];
+    
+//    self.request = mutableCopyOfRequest;
+    [self startLoading];
+}
+
+- (void)performDefaultHandlingForAuthenticationChallenge:(NSURLAuthenticationChallenge *)challenge {
+    self.ignoreChallenge = YES;
+    [self startLoading];
+}
+
+
 typedef struct {
     NSTimeInterval slotTime;
     double chunkSizePerSlot;
