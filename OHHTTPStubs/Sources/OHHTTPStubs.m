@@ -441,7 +441,7 @@ static NSTimeInterval const kSlotTime = 0.25; // Must be >0. We will send a chun
     NSData *data = [creds dataUsingEncoding:NSUTF8StringEncoding];
     [mutableCopyOfRequest addValue:[@"Basic " stringByAppendingString:[data base64EncodedStringWithOptions:0]] forHTTPHeaderField:@"Authorization"];
     
-//    self.request = mutableCopyOfRequest;
+    self.stub = [OHHTTPStubs.sharedInstance firstStubPassingTestForRequest:mutableCopyOfRequest];
     [self startLoading];
 }
 
