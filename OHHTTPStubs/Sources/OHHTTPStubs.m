@@ -371,17 +371,23 @@ static NSTimeInterval const kSlotTime = 0.25; // Must be >0. We will send a chun
             }];
         }
         else if (urlResponse.statusCode == 401 && !self.ignoreChallenge) {
+            NSString* authRealm = [urlResponse.allHeaderFields[@"WWW-Authenticate"] componentsSeparatedByString:@"="].lastObject;
+            NSInteger port = [self.request.URL.port integerValue] > 0 ? : [self.request.URL.scheme isEqualToString: NSURLProtectionSpaceHTTPS] ? 443 : 80;
+
             NSURLProtectionSpace* protection = [[NSURLProtectionSpace alloc] initWithHost:self.request.URL.host
-                                                                                     port:[self.request.URL.port integerValue]
+                                                                                     port:port
                                                                                  protocol:self.request.URL.scheme
-                                                                                    realm:@"my realm"
+                                                                                    realm:authRealm ? [authRealm stringByReplacingOccurrencesOfString:@"\"" withString:@""] : @"my realm"
                                                                      authenticationMethod:NSURLAuthenticationMethodHTTPBasic];
-            NSURLAuthenticationChallenge* authChallange = [[NSURLAuthenticationChallenge alloc] initWithProtectionSpace:protection
-                                                                                                     proposedCredential:nil
-                                                                                                   previousFailureCount:self.previousFailureCount++
-                                                                                                        failureResponse:nil
-                                                                                                                  error:nil
-                                                                                                                 sender:(id<NSURLAuthenticationChallengeSender>)self];
+
+            NSURLCredentialStorage* credStore = [NSURLCredentialStorage sharedCredentialStorage];
+
+            NSURLAuthenticationChallenge* authChallange = [[NSURLAuthenticationChallenge alloc] initWithProtectionSpace: protection
+                                                                                                     proposedCredential: [[credStore credentialsForProtectionSpace:protection] allValues].lastObject
+                                                                                                   previousFailureCount: self.previousFailureCount++
+                                                                                                        failureResponse: urlResponse
+                                                                                                                  error: nil
+                                                                                                                 sender: (id<NSURLAuthenticationChallengeSender>)self];
             [client URLProtocol:self didReceiveAuthenticationChallenge:authChallange];
         }
         else
