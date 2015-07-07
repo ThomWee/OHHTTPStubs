@@ -281,6 +281,16 @@ static NSTimeInterval const kSlotTime = 0.25; // Must be >0. We will send a chun
 @implementation OHHTTPStubsProtocol
 @synthesize request = _request;
 
++ (BOOL)canInitWithTask:(NSURLSessionTask *)task {
+    return [OHHTTPStubsProtocol canInitWithRequest:task.currentRequest];
+}
+
+- (instancetype)initWithTask:(NSURLSessionTask *)task cachedResponse:(NSCachedURLResponse *)cachedResponse client:(id <NSURLProtocolClient>)client {
+    return [[OHHTTPStubsProtocol alloc] initWithRequest:task.currentRequest
+                                         cachedResponse:cachedResponse
+                                                 client:client];
+}
+
 + (BOOL)canInitWithRequest:(NSURLRequest *)request
 {
     return ([OHHTTPStubs.sharedInstance firstStubPassingTestForRequest:request] != nil);
@@ -378,7 +388,7 @@ static NSTimeInterval const kSlotTime = 0.25; // Must be >0. We will send a chun
                                                                                      port:port
                                                                                  protocol:self.request.URL.scheme
                                                                                     realm:authRealm ? [authRealm stringByReplacingOccurrencesOfString:@"\"" withString:@""] : @"my realm"
-                                                                     authenticationMethod:NSURLAuthenticationMethodHTTPBasic];
+                                                                     authenticationMethod:NSURLAuthenticationMethodDefault];
 
             NSURLCredentialStorage* credStore = [NSURLCredentialStorage sharedCredentialStorage];
 
@@ -387,8 +397,13 @@ static NSTimeInterval const kSlotTime = 0.25; // Must be >0. We will send a chun
                                                                                                    previousFailureCount: self.previousFailureCount++
                                                                                                         failureResponse: urlResponse
                                                                                                                   error: nil
-                                                                                                                 sender: (id<NSURLAuthenticationChallengeSender>)self];
-            [client URLProtocol:self didReceiveAuthenticationChallenge:authChallange];
+                                                                                                                 sender: self];
+            [self executeOnClientRunLoopAfterDelay:responseStub.requestTime block:^{
+                if (!self.stopped)
+                {
+                    [client URLProtocol:self didReceiveAuthenticationChallenge:authChallange];
+                }
+            }];
         }
         else
         {
@@ -457,6 +472,10 @@ static NSTimeInterval const kSlotTime = 0.25; // Must be >0. We will send a chun
 - (void)performDefaultHandlingForAuthenticationChallenge:(NSURLAuthenticationChallenge *)challenge {
     self.ignoreChallenge = YES;
     [self startLoading];
+}
+
+- (void)rejectProtectionSpaceAndContinueWithChallenge:(NSURLAuthenticationChallenge *)challenge {
+
 }
 
 - (NSURLRequest *)request {
